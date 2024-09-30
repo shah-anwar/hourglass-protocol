@@ -1,1 +1,1 @@
-# hourglass-protocol
+# Hourglass Protocol
