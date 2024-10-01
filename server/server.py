@@ -3,15 +3,22 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 
 def configure():
     global HOST, PORT, private_key, public_key
+    print("Reading from config file...")
     with open('config.pkl') as f:
         HOST, PORT, private_key = pickle.load(f)
+    print("Variables loaded successfully.")
 
 def firstRun():
     global HOST, PORT, private_key, public_key
     changeHost()
 
+    print("Generating Keys...")
     private_key, public_key = generateKeys()
-
+    
+    print(f"Keys generated.")
+    print("")
+    print("Writing to config file...")
+    
     with open('config.pkl', 'w') as f:
         pickle.dump([HOST, PORT, private_key], f)
 
@@ -39,6 +46,7 @@ async def handle_client(reader, writer):
     await writer.wait_closed()
 
 def changeHost():
+    global HOST, PORT, private_key, public_key
     while True:
         try:
             HOST = input("Enter HOST: ")
@@ -51,11 +59,16 @@ def changeHost():
         else:
             break
 
+async def startServer():
+    server = await asyncio.start_server(handle_client, HOST, PORT)
+
 def main():
     if not os.path.isfile('config.pkl'):
         firstRun()
     else:
         configure()
+    
+    startServer() 
 
 if __name__ == '__main__':
     main()
