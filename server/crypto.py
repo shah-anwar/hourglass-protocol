@@ -6,6 +6,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 import os
 import base64
+import secrets
 
 # Generate and Encrypting Private Key
 
@@ -56,3 +57,7 @@ def decryptKey(encrypted_private_key_b64, password):
     )
     
     return private_key
+
+# Authentication
+def generateChallenge():
+    return secrets.token_hex(32)
