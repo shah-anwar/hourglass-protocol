@@ -3,6 +3,9 @@ server/config.pkl
 .vscode/
 .DS_Store
 
+client/servers
+client/users
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

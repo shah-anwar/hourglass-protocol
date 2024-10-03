@@ -7,15 +7,17 @@ import motor.motor_asyncio
 import redis.asyncio as aioredis
 from datetime import datetime
 from bcrypt import hashpw, gensalt, checkpw
-from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives.asymmetric import padding as asymmetric_padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from getpass import getpass
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
 
 ### MongoDB connection
 
-client = motor.motor_asyncio.AsyncIOMotorClient('mongodb')
+client = motor.motor_asyncio.AsyncIOMotorClient('mongodb://localhost:27017')
 db = client.hourglass_db
 users_collection = db.users
 
@@ -86,6 +88,7 @@ async def handleClient(reader, writer):
     message = (await reader.readline()).decode().strip()
     request = message.split(":")[0].strip()
     data = message.split(":")[1].strip()
+    print(message)
     if request == "CHECK_USERNAME":
         await handleAvailability(data, reader, writer)
     elif request == "REGISTER":
@@ -99,25 +102,36 @@ async def handleAvailability(username, reader, writer):
     if user_data:
         writer.write(b"USERNAME_TAKEN\n")
     else:
-        writer.write(f"PUBLIC_KEY:{public_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo).decode()}\n".encode())
+        public_key_bytes = public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+        message = b"PUBLIC_KEY:" + public_key_bytes
+        writer.write(message)
 
 async def handleRegistration(encrypted_data, reader, writer):
+    print("Handling Reg")
     try:
-        data = private_key.decrypt(
-                encrypted_data,
-                padding.OAEP(
-                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+        encrypted_aes_key, encrypted_message = encrypted_data.split("::", 1)
+        aes_key = private_key.decrypt(
+                encrypted_aes_key,
+                asymmetric_padding.OAEP(
+                    mgf=asymmetric_padding.MGF1(algorithm=hashes.SHA256()),
                     algorithm=hashes.SHA256(),
                     label=None
                 )
             ).decode()
+        
+        cipher = AES.new(aes_key, AES.MODE_CBC)
+        decrypted_message = unpad(cipher.decrypt(encrypted_message), AES.block_size).decode()
+        
     except Exception as e:
         writer.write(b"ERROR: Failed to decrypt message\n")
         await writer.drain()
         writer.close()
         return
     
-    username, user_public_key_data = data.split(",", 1)
+    username, user_public_key_data = decrypted_message.split(",", 1)
     existing_user = await users_collection.find_one({"username": username.strip()})
     if existing_user:
         writer.write(b"USERNAME_TAKEN\n")
@@ -148,8 +162,8 @@ async def handleLogin(message, reader, writer):
     try:
         username = private_key.decrypt(
             encrypted_username,
-            padding.OAEP(
-                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            asymmetric_padding.OAEP(
+                mgf=asymmetric_padding.MGF1(algorithm=hashes.SHA256()),
                 algorithm=hashes.SHA256(),
                 label=None
             )
@@ -175,7 +189,7 @@ async def handleLogin(message, reader, writer):
             user_public_key.verify(
                 signed_challenge,
                 challenge.encode(),
-                padding.PKCS1v15(),
+                asymmetric_padding.PKCS1v15(),
                 hashes.SHA256()
             )
         except Exception as e:
