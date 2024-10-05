@@ -11,12 +11,12 @@ import packet_handler as PacketHandler
 from api.api_manager import APIManager
 
 USER_IP = None
-server = "tcp://hourglass-protocol-production.up.railway.app"
-server_port = 5555
+host = "hourglass-protocol-production.up.railway.app"
+port = 5555
 
 class Client:
-    def __init__(self, host='127.0.0.1', port=123):
-        self.apiManager = APIManager(server, server_port)
+    def __init__(self, host=host, port=port):
+        self.apiManager = APIManager(host, port)
         message = self.start_circuit()
         print(PacketHandler.process_packet(message))
 
@@ -38,4 +38,27 @@ class Client:
     def send(self, message, destination):
         pass
 
-Client()
+#Client()
+
+def connect_to_server(host, port):
+    # Create a TCP socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
+        try:
+            # Connect to the server
+            client_socket.connect((host, port))
+            print(f'Connected to server at {host}:{port}')
+
+            # Example of sending a message
+            message = "LOGIN"
+            client_socket.sendall(message.encode())
+            print(f'Sent: {message}')
+
+            # Receiving response from server
+            data = client_socket.recv(1024)  # Buffer size is 1024 bytes
+            print(f'Received: {data.decode()}')
+
+        except Exception as e:
+            print(f'An error occurred: {e}')
+
+if __name__ == "__main__":
+    connect_to_server(host, port)

@@ -10,7 +10,6 @@ packet_handler = PacketHandler()
 
 #port = os.environ.get("PORT", "5555")
 port = "5555"
-print(f"Server listening on port {port}")
 
 async def handle_client(reader, writer):
     address = writer.get_extra_info("peername")
@@ -38,7 +37,7 @@ async def handle_client(reader, writer):
     await writer.wait_closed()
         
 async def start_server():
-    server = await asyncio.start_server(handle_client, '0.0.0.0', port)
+    server = await asyncio.start_server(handle_client, '0.0.0.0', 5555)
     addr = server.sockets[0].getsockname()
     print(f"Server started at {addr}")
 

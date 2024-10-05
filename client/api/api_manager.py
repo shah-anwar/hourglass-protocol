@@ -34,6 +34,7 @@ class APIManager:
             s.connect((self.server, self.server_port))
             message = "LOGIN"
             s.sendall(message.encode())
+            print("Msg Sent")
 
             response = s.recv(1024)
             return response
