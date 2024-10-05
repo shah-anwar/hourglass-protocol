@@ -4,14 +4,20 @@ from .circuit_handler import CircuitHandler
 from .exit_node_handler import ExitNodeHandler
 from .origin_node_handler import OriginNodeHandler
 
-import random
+import random, zmq
+
+context = zmq.Context()
 
 class APIManager:
     def __init__(self, server):
         self.circuits = {"circuit_id": CircuitHandler("circuit_id", "ip address", "ip address")} #format
         self.exits = {"circuit_id": ExitNodeHandler("circuit_id", "ip address", "ip address")} #receives data from both server and random other circuits
         self.origin = None
+        
         self.server = server
+        self.server_socket = context.socket(zmq.REQ)
+        self.server_socket.connect(server)
+
         #{"circuit_id": OriginNodeHandler("circuit_id", "ip address")}
 
     def send_message(self, message, destination):
@@ -22,20 +28,23 @@ class APIManager:
 
     def new_origin(self, circuit_id, message):
         ip_list = self.get_ips()
-        chosen_node = random.choice(ip_list)
-        self.origin = OriginNodeHandler(circuit_id, chosen_node)
+        print(ip_list)
+        #chosen_node = random.choice(ip_list)
+        #self.origin = OriginNodeHandler(circuit_id, chosen_node)
 
     def get_ips(self):
-        pass
+        self.server_socket.send(b"LOGIN")
+        response = self.server_socket.recv()
+        return response
 
     def process_message(self, message):
         # find recipient
         # extract circuit id
         # match id to dictionary of circuits and exits
         # send message to required handler
-        match command:
+        match message:
             case "JOIN":
-                return handle_join(sections)
+                pass
             
     def get_purpose(self, message):
         return True
