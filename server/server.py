@@ -13,7 +13,8 @@ class Server:
         self.context = zmq.asyncio.Context()
         self.socket = self.context.socket(zmq.REP)
 
-        port = os.environ.get("PORT", "5555")
+        #port = os.environ.get("PORT", "5555")
+        port = "5555"
         socket.bind(f"tcp://*:{port}")
         print(f"Server listening on port {port}")
 
