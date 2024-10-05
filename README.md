@@ -77,4 +77,4 @@ The project also implements Zero-Knowledge Proofs (ZKP) and encrypted heartbeats
 **User-Friendly GUI**: The GUI allows users to interact with the network, send messages, and monitor connections without needing to manage the underlying complexity of routing and encryption.
 
 ## Sequence Diagrams
-![Getting IPs](https://github.com/shah-anwar/hourglass-protocol/blob/alternate/1.png?raw=true)
+![Getting IPs](https://github.com/shah-anwar/hourglass-protocol/blob/alternate/reference/1.png?raw=true)
