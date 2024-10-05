@@ -11,7 +11,7 @@ import packet_handler as PacketHandler
 from api.api_manager import APIManager
 
 USER_IP = None
-server = None
+server = "tcp://hourglass-protocol-production.up.railway.app:5555"
 
 def client_process(pipe):
     while True:
