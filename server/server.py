@@ -15,7 +15,7 @@ class Server:
 
         #port = os.environ.get("PORT", "5555")
         port = "5555"
-        socket.bind(f"tcp://*:{port}")
+        self.socket.bind(f"tcp://*:{port}")
         print(f"Server listening on port {port}")
 
         self.packet_handler = PacketHandler()
