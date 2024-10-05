@@ -11,8 +11,8 @@ import packet_handler as PacketHandler
 from api.api_manager import APIManager
 
 USER_IP = None
-host = "hourglass-protocol-production.up.railway.app"
-port = 5555
+host = "hourglass-protocol.up.railway.app"
+port = 12345
 
 class Client:
     def __init__(self, host=host, port=port):
