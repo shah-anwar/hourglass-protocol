@@ -78,3 +78,4 @@ The project also implements Zero-Knowledge Proofs (ZKP) and encrypted heartbeats
 
 ## Sequence Diagrams
 ![Getting IPs](https://github.com/shah-anwar/hourglass-protocol/blob/alternate/reference/1.png?raw=true)
+![Registering with Server](https://github.com/shah-anwar/hourglass-protocol/blob/alternate/reference/2.png?raw=true)
