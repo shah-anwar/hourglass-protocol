@@ -1,36 +1,49 @@
 import socket
 import asyncio
-import zmq
-import zmq.asyncio
 import os
 
 from .packet_handler import PacketHandler
 from .redis_client import RedisClient
 from .mongodb_client import MongoDBClient
 
-class Server:
-    def __init__(self):
-        self.context = zmq.asyncio.Context()
-        self.socket = self.context.socket(zmq.REP)
+packet_handler = PacketHandler()
 
-        #port = os.environ.get("PORT", "5555")
-        port = "5555"
-        self.socket.bind(f"tcp://*:{port}")
-        print(f"Server listening on port {port}")
+#port = os.environ.get("PORT", "5555")
+port = "5555"
+print(f"Server listening on port {port}")
 
-        self.packet_handler = PacketHandler()
+async def handle_client(reader, writer):
+    address = writer.get_extra_info("peername")
+    print(f"Connection from {address}")
 
-    async def listen_for_packets(self):
-        while True:
-            packet = await self.socket.recv()
-            print(f"Received packet: {packet}")
+    while True:
+        try:
+            data = await reader.read(100)
+            if not data:
+                break
 
-            response = self.packet_handler.handle_packet(packet)
-            await self.socket.send(response)
+            message = data.decode()
+            print(f"Received {message}")
+            
+            response = packet_handler.handle_packet(message)
+            writer.write(response.encode())
+            await writer.drain()
 
-async def main():
-    server = Server()
-    await server.listen_for_packets()
+        except ConnectionResetError:
+            print(f"Connection closed by {address}")
+            break
+    
+    print(f"Closing connection from {address}")
+    writer.close()
+    await writer.wait_closed()
+        
+async def start_server():
+    server = await asyncio.start_server(handle_client, '0.0.0.0', port)
+    addr = server.sockets[0].getsockname()
+    print(f"Server started at {addr}")
+
+    async with server:
+        await server.serve_forever()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(start_server())

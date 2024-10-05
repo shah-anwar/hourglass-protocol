@@ -11,17 +11,12 @@ import packet_handler as PacketHandler
 from api.api_manager import APIManager
 
 USER_IP = None
-server = "tcp://hourglass-protocol-production.up.railway.app:5555"
-
-def client_process(pipe):
-    while True:
-        msg = pipe.recv()
-        break
-        #pass
+server = "tcp://hourglass-protocol-production.up.railway.app"
+server_port = 5555
 
 class Client:
     def __init__(self, host='127.0.0.1', port=123):
-        self.apiManager = APIManager(server)
+        self.apiManager = APIManager(server, server_port)
         message = self.start_circuit()
         print(PacketHandler.process_packet(message))
 
