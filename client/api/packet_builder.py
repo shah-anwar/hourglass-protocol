@@ -34,6 +34,8 @@ def sign_message(private_key, message):
     return signature
 
 class PacketBuilder:
+
+    @staticmethod
     def join_request(circuit_id, circuit_private_key):
         HEADER = b"JOIN" + delim + circuit_id + delim
         timestamp = str(time.time()).encode() + delim
@@ -48,8 +50,33 @@ class PacketBuilder:
         signed_message = join_message + delim + signature
         return signed_message
 
-    def join_ack():
-        HEADER = b"JOIN_ACK:"
+    def join_ack(circuit_id, forwards_private_key, back_public_key):
+        HEADER = b"JOIN_ACK" + delim + circuit_id + delim
+        timestamp = str(time.time()).encode() + delim
+
+        forwards_public_key_pem = forwards_private_key.public_key().public_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PublicFormat.SubjectPublicKeyInfo
+                )
+        
+        join_message = HEADER + timestamp + forwards_public_key_pem
+        signature = sign_message(forwards_private_key, join_message)
+        signed_message = join_message + delim + signature
+
+        aes_key = os.urandom(32)
+        encrypted_message = encrypt_aes(signed_message, aes_key)
+        encrypted_aes_key = back_public_key.encrypt(
+                    aes_key,
+                    asymmetric_padding.OAEP(
+                        mgf=asymmetric_padding.MGF1(algorithm=hashes.SHA256()),
+                        algorithm=hashes.SHA256(),
+                        label=None
+                    )
+                )
+        final_message = encrypted_message + encrypted_aes_key
+
+        return final_message
+
     
     def exit_ack():
         HEADER = b"EXIT_ACK:"

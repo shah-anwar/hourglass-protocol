@@ -4,50 +4,97 @@ from .circuit_handler import CircuitHandler
 from .exit_node_handler import ExitNodeHandler
 from .origin_node_handler import OriginNodeHandler
 
-import random, asyncio, socket
+from .packet_handler import process_packet
+from .packet_builder import PacketBuilder
+
+from cryptography.hazmat.primitives.asymmetric import rsa
+
+import asyncio, socket
 
 class APIManager:
-    def __init__(self, server, server_port):
-        self.circuits = {"circuit_id": CircuitHandler("circuit_id", "ip address", "ip address")} #format
-        self.exits = {"circuit_id": ExitNodeHandler("circuit_id", "ip address", "ip address")} #receives data from both server and random other circuits
+    def __init__(self, server_ip, server_port):
+        self.circuits = {}
+        self.exits = {}
         self.origin = None
 
-        self.server = server
+        self.packet_builder = PacketBuilder()
+
+        self.server_ip = server_ip
         self.server_port = server_port
 
-        #{"circuit_id": OriginNodeHandler("circuit_id", "ip address")}
+        self.client_ip = '127.0.0.1'
+        self.client_port = 123
 
-    def send_message(self, message, destination):
-        pass
+        self.reader = None
+        self.writer = None
 
-    def exit_message(self, message):
-        pass
+    # circuit initialisation methods
 
-    def new_origin(self, circuit_id, message):
-        ip_list = self.get_ips()
-        return ip_list
-        #chosen_node = random.choice(ip_list)
-        #self.origin = OriginNodeHandler(circuit_id, chosen_node)
+    async def new_origin(self, circuit_id: bytes):
+        ip_list = self.get_ips(5)
+        self.origin = OriginNodeHandler(circuit_id, ip_list)
 
-    def get_ips(self):
+    def get_ips(self, amount: int):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((self.server, self.server_port))
-            message = "LOGIN"
+            s.connect((self.server_ip, self.server_port))
+            message = f"GETIPS~~{amount}"
             s.sendall(message.encode())
-            print("Msg Sent")
-
             response = s.recv(1024)
-            return response
+        
+        response = response.decode()
 
-    def process_message(self, message):
-        # find recipient
-        # extract circuit id
-        # match id to dictionary of circuits and exits
-        # send message to required handler
-        match message:
-            case "JOIN":
-                pass
+        if response == "DATABASE_EMPTY":
+            print("There are no connectable users.")
+            return []
+
+        ip_list = response.split("~~")
+        print(ip_list)
+        return ip_list
+
+    # asynchronous methods for average running
+
+    async def handle_incoming_requests(self):
+        server = await asyncio.start_server(self.handle_node, self.client_ip, self.client_port)
+
+        async with server:
+            print(f"Listening for join requests on {self.client_ip}:{self.client_port}")
+            await server.serve_forever()
+
+    async def handle_node(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+        back_node_ip = writer.get_extra_info('peername')
+        print(f"New connection from {back_node_ip}")
+
+        try:
+            data = await reader.read(1024)
+            if not data:
+                print(f"No data from {back_node_ip}. Closing.")
             
-    def get_purpose(self, message):
-        return True
-    
+            packet = data.decode().strip()
+            print(f"Received packet from {back_node_ip}")
+
+            header, result = process_packet(packet)
+            if header == "JOIN":
+                self.join_circuit(result, reader, writer)
+        
+        except Exception as e:
+            print(f"Error while handling node {back_node_ip}: {e}")
+        
+        finally:
+            print(f"Closing connection with {back_node_ip}")
+            writer.close()
+            await writer.wait_closed()
+
+    async def join_circuit(self, result, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+        circuit_id = str(result[0])
+        back_public_key = result[1]
+        forwards_private_key = rsa.generate_private_key(
+                    public_exponent=65537,
+                    key_size=2048,
+                )
+        
+        response = self.packet_builder.join_ack(circuit_id, forwards_private_key, back_public_key)
+        writer.write(response)
+        await writer.drain()
+        
+        ip_list = self.get_ips(5)
+        self.circuits[circuit_id] = CircuitHandler(circuit_id, ip_list, (reader, writer), forwards_private_key, back_public_key)

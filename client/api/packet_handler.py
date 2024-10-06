@@ -4,7 +4,7 @@ from cryptography.hazmat.backends import default_backend
 
 delim = b"~~" #delimiter
 
-def verify_signature(public_key, message, signature):
+def verify_signature(public_key: rsa.RSAPublicKey, message: bytes, signature: bytes):
     try:
         public_key.verify(
             signature,
@@ -19,14 +19,14 @@ def verify_signature(public_key, message, signature):
     except:
         return False
 
-def process_packet(packet):
+def process_packet(packet: bytes):
     sections = packet.split(delim)
     command = sections[0].decode('utf-8').strip()
-    for i, section in enumerate(sections):
-        print(f"Section {i}: {section}")
     match command:
         case "JOIN":
             return handle_join(sections)
+        case _:
+            return None, [None]
 
 def handle_join(sections):
     circuit_id, timestamp, public_key_bytes, signature = sections[1:5]
@@ -37,7 +37,6 @@ def handle_join(sections):
         backend=default_backend()
     )
     if not verify_signature(public_key, reconstructed_data, signature):
-        return None, None
+        return None, [None]
     
-    return circuit_id.hex(), public_key
-    
+    return "JOIN", [circuit_id.hex(), public_key]

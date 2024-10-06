@@ -2,13 +2,13 @@ import socket
 import asyncio
 import os
 
-from .packet_handler import PacketHandler
-from .redis_client import RedisClient
-from .mongodb_client import MongoDBClient
+from packet_handler import PacketHandler
+from mongodb_client import MongoDBClient
 
 packet_handler = PacketHandler()
 
 port = os.environ.get("PORT", "12345")
+
 
 async def handle_client(reader, writer):
     address = writer.get_extra_info("peername")
@@ -20,11 +20,11 @@ async def handle_client(reader, writer):
             if not data:
                 break
 
-            message = data.decode()
-            print(f"Received {message}")
+            print(f"Received {data.decode()}")
             
-            response = packet_handler.handle_packet(message)
-            writer.write(response.encode())
+            response = packet_handler.process_packet(data, address)
+            print(f"Returning {response.decode()}")
+            writer.write(response)
             await writer.drain()
 
         except ConnectionResetError:
